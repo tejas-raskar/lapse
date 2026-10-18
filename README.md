@@ -18,17 +18,13 @@ An old number can recover a mailbox. That mailbox can recover other accounts. **
 - **Plan before acting:** simulate repairs in FalkorDB graph copies and order changes while old contacts still work.
 - **Execute with approval:** supported browser actions, code relay, or guided manual steps; then keep watching for new risks.
 
-**Telegram is the conversation interface.** Ask *“What happens if someone gets my old number?”*, open **Show me** to inspect the graph, then ask *“What should I fix first?”* The web workspace provides the account map, plans, connections, and agent browser view.
+Talk to it in Telegram; inspect the account map, plans, and agent activity in the web workspace.
 
 ![Lapse account map showing a synthetic old-number scenario and its multi-hop account dependencies](docs/assets/account-map.png)
-
-*Light-mode app preview with synthetic frontend data, not live accounts or verified backend measurements.*
 
 ## What is in the graph?
 
 **Example control flow:** old phone → Google host account → primary mailbox → Notion account.
-
-These are control transitions, not literal stored edge directions. The host `Account` and its mailbox `Root:Email` are separate: signing into the host opens the inbox that downstream accounts use.
 
 | Entity group | Nodes | What they represent |
 | --- | --- | --- |
@@ -39,11 +35,9 @@ These are control transitions, not literal stored edge directions. The host `Acc
 | Agent context | `User`, `Turn`, `ToolCall` | User metadata, conversation history, and tool/query records. |
 | Shared policy | `Service`, `MethodTemplate`, `ChangeProcedure`, `Carrier` | Service rules, access templates, change procedures, and reassignment rules. |
 
-Shared policies live in `lapse:policy`; each user's compiled model and history live in `lapse:u:<uid>`. Queries never cross graph boundaries. Policy events can also record per-user notification state.
+Shared policy lives in `lapse:policy`; each user's graph lives in `lapse:u:<uid>`. Queries never cross graphs.
 
 ### How the nodes connect
-
-Arrows below show **actual stored relationship directions**. `Root/Account` means either node type.
 
 | Purpose | Relationships |
 | --- | --- |
@@ -58,21 +52,17 @@ Arrows below show **actual stored relationship directions**. `Root/Account` mean
 | Agent memory | `Turn -ABOUT-> Account/Root`; `ToolCall -IN-> Turn` |
 | Policy | `Service -HAS_METHOD-> MethodTemplate`; `Service -HAS_CHANGE-> ChangeProcedure` |
 
-**OR between methods; AND within a method.** Any eligible method can grant access, but **all** its `NEEDS` must be controlled. An email-plus-device method cannot succeed with email alone. The user knows passwords; a stranger does not. A method with no possession prerequisites still requires a password. `USES` records a contact dependency, not proof of access.
+**OR between methods; AND within a method.** Any method can grant access, but only if **all** its `NEEDS` are controlled. The user knows passwords; a stranger does not. `USES` records a contact dependency, not proof of access.
 
-A mailbox method **needs the host Account** and **grants the Email Root**. Standalone metadata records need no artificial edges. The tables cover implemented entities and relationships; planned `Action`/`LOGGED` records are not included. [Full schema and semantics →](docs/data-model.md)
+**Contact dependencies (`USES`)**
 
-### See it in FalkorDB
+![FalkorDB Browser graph of account contact dependencies using USES relationships](docs/assets/falkordb-uses-graph.png)
 
-> **Screenshot placeholder · Demo access graph**
->
-> Add `docs/assets/falkordb-demo-graph.png`: a small synthetic phone → host account → mailbox → downstream account graph, with Method nodes and labelled `NEEDS`/`GRANTS` edges.
+**Access requirements (`NEEDS`)**
 
-> **Screenshot placeholder · Multi-hop explanation**
->
-> Add `docs/assets/falkordb-multihop.png`: one saved scenario's `REACHED`/`DERIVED` graph, showing the prerequisite chain and an AND branch.
+![FalkorDB Browser graph of account access requirements using NEEDS relationships](docs/assets/falkordb-needs-graph.png)
 
-[Capture instructions and replacement image Markdown →](web/docs/verification.md#falkordb-screenshots)
+[Full schema and semantics →](docs/data-model.md)
 
 ## What traversals does Lapse use?
 
@@ -81,13 +71,11 @@ A mailbox method **needs the host Account** and **grants the Email Root**. Stand
 | **What can a stranger reach?** | Repeated [`NEEDS`/`GRANTS` closure](lapse/graph/queries/closure_round.cypher). | Checks complete prerequisite sets, not just connected nodes; advances until no new target is controlled. |
 | **What if I lose this contact?** | [Before/after closure comparisons](lapse/graph/scenarios.py), with and without password knowledge. | Separates accounts lost now from accounts losing password-free recovery. |
 | **Why is this account affected?** | Follow [`DERIVED`](lapse/graph/queries/explain.cypher) from target to prerequisites; retrieve `SUPPORTS`/`MENTIONS` evidence. | Preserves every prerequisite branch, including AND methods. |
-| **What is the shortest route?** | [`algo.SPpaths`](lapse/graph/queries/algo_shortest_path.cypher) over `ENABLES`. | Finds shortest password-free, single-factor routes. |
-| **Which dependency is a hub?** | [`algo.betweenness`](lapse/graph/queries/algo_keystones.cypher) plus bounded upstream/downstream traversals over `ENABLES`. | Estimates centrality; ranks by upstream-source × downstream-account counts. |
+| **What is the shortest route?** | `algo.SPpaths` over `ENABLES`. | Finds shortest password-free, single-factor routes. |
+| **Which dependency is a hub?** | `algo.betweenness` plus bounded upstream/downstream traversals over `ENABLES`. | Estimates centrality; ranks by upstream-source × downstream-account counts. |
 | **What should I fix first?** | [`GRAPH.COPY` simulations](lapse/graph/planner.py), contact changes, recompilation, and exposure reevaluation. | Tests repairs before proposing ordered steps, rather than guessing from an account list. |
 
-`ENABLES` exists only for password-free methods with exactly one prerequisite. Its algorithms are **lower bounds**, not substitutes for AND/OR closure. No single-factor route does **not** mean safe.
-
-The LLM selects fixed tools; **it never writes Cypher**. Named queries perform the reasoning in FalkorDB. Without the graph, Lapse cannot compute risk, explain dependencies, or simulate and resume repairs.
+`ENABLES` covers only password-free, single-prerequisite methods, so its algorithms give **lower bounds**; no single-factor route does **not** mean safe. The LLM picks fixed tools and **never writes Cypher**.
 
 ### Reproducible demo results
 
@@ -99,7 +87,7 @@ Synthetic backend fixture results, **under the methods we model**:
 | College inbox closes | <!-- claim:lockout_email_college.lost_now -->1<!-- /claim --> account lost immediately; <!-- claim:lockout_email_college.recovery_lost -->4<!-- /claim --> lose recovery. |
 | Simulate replacing the old number | <!-- claim:plan_phone_old.before -->11<!-- /claim --> distinct affected accounts → <!-- claim:plan_phone_old.after -->0<!-- /claim --> projected, across <!-- claim:plan_phone_old.steps -->7<!-- /claim --> proposed steps. |
 
-The plan counts the union of takeover and lockout exposure, hence 11 rather than 10. Projection is not execution or a guarantee about unknown methods. [Reproduce the claims →](docs/claims.md)
+The plan counts takeover and lockout exposure together, hence 11. Projections are not execution. [Reproduce the claims →](docs/claims.md)
 
 ## Run locally
 
@@ -119,22 +107,10 @@ uv run python -m lapse.onboarding --uid demo
 make demo
 ```
 
-Open the **[workspace](http://localhost:8080)** → **Connections** to discover inbox accounts and link Telegram. Loading roots is not inbox discovery. Inspect the database in **[FalkorDB Browser](http://localhost:3001)**. [Detailed configuration, linking, browser execution, and troubleshooting →](docs/deploy.md)
+Open the **[workspace](http://localhost:8080)** → **Connections** to discover inbox accounts and link Telegram. FalkorDB Browser is at **[localhost:3001](http://localhost:3001)**. [Configuration and troubleshooting →](docs/deploy.md)
 
-## Tests and references
-
-With dependencies installed and FalkorDB running:
-
-```sh
-make lint && make test && make test-db
-uv run python scripts/verify_claims.py
-(cd web && npm ci && npm test && npm run build)
-```
-
-[CI](.github/workflows/ci.yml) runs Python lint, unit/database tests, and claim checks; frontend checks run separately. Coverage includes AND/OR reasoning, multi-hop scenarios, repair simulations, ingestion, approvals, and UI state.
+## References
 
 [Setup](docs/deploy.md) · [Graph model](docs/data-model.md) · [Named queries](lapse/graph/queries) · [Tools and MCP](docs/tools.md) · [Execution support](docs/exec-notes.md) · [Contributing](AGENTS.md)
 
-**Scope:** experimental and policy-dependent. Unmodelled services are **unknown, not safe**. SSO/synced authentication is not modelled. Only the documented personal, unmanaged Notion flow has live browser-recipe validation; other flows may require manual action. The college-closure demo is staged. [Assumptions and policy limits](docs/policy-notes.md).
-
-*Built with AI coding assistance; implementation and claims remain subject to review and verification.*
+**Scope:** experimental. Unmodelled services are **unknown, not safe**; SSO is not modelled. Only the personal, unmanaged Notion email change is live-validated. [Policy limits →](docs/policy-notes.md)
