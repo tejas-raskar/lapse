@@ -17,7 +17,7 @@ class AssistedExecutor:
             else f"remove {contact_value(ctx.old_root)} as your {contact}"
         )
         message = (
-            f"Open <b>{escape(ctx.service.name)}</b> settings and {action}. "
+            f"Open <b>{escape(ctx.service.name)}</b> settings and {action}.\n\n"
             "I'll check your email for confirmation and tick it off once it's changed."
         )
         ctx.emitter.emit(

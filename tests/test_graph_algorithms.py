@@ -70,8 +70,9 @@ def test_algorithm_replies_never_call_a_missing_route_safe():
         ],
     }
     assert templated([route]) == (
-        "The shortest way in takes 2 steps: your Vi number (••4321) → "
-        "<b>Google account</b> (demo@example.com) → <b>demo@example.com</b>."
+        "The shortest way in takes 2 steps:\n\nyour Vi number (••4321) → "
+        "<b>Google account</b> (demo@example.com) → <b>demo@example.com</b>\n\n"
+        "That's the chain to break. Want me to plan the fix?"
     )
     reply = templated([{"outcome": "no_single_route", "from_id": "a", "to_id": "b"}])
     assert "can't promise it's safe" in reply
@@ -91,4 +92,4 @@ def test_algorithm_replies_never_call_a_missing_route_safe():
             },
         ],
     }
-    assert "1. <b>Google account</b> (demo@example.com): 1 account depends on it." in templated([keystones])
+    assert "Start with <b>Google account</b> (demo@example.com). 1 account depends on it." in templated([keystones])

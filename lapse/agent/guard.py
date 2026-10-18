@@ -190,7 +190,7 @@ def _scenario(result, results):
         )
     if affected:
         lines.append("Want me to fix it?")
-    return " ".join(lines)
+    return "\n\n".join(lines)
 
 
 def _node_name(label: str) -> str:
@@ -206,9 +206,9 @@ def templated(results: list) -> str:
     scenarios = {r["kind"]: r for r in results if isinstance(r, dict) and "affected_accounts" in r}
     if len(scenarios) > 1 and isinstance(results[-1], dict) and "affected_accounts" in results[-1]:
         answers = [
-            _scenario(result, results).removesuffix(" Want me to fix it?") for result in scenarios.values()
+            _scenario(result, results).removesuffix("\n\nWant me to fix it?") for result in scenarios.values()
         ]
-        return "\n".join(answers) + " Want me to fix it?"
+        return "\n\n".join(answers) + "\n\nWant me to fix it?"
     for result in reversed(results):
         if isinstance(result, list) and result:
             roots = _roots([result])
@@ -220,7 +220,7 @@ def templated(results: list) -> str:
                     if date:
                         ending += f" on {format_date(date, bold=True)}"
                     lines.append(root_name(root) + ending + ".")
-                return "\n".join(lines) + "\nWhich one would you like to check?"
+                return "\n\n".join(lines) + "\n\nWhich one would you like to check?"
             labels = [
                 escape(item["label"]) for item in result if isinstance(item, dict) and item.get("label")
             ]
@@ -232,27 +232,31 @@ def templated(results: list) -> str:
         if result.get("outcome") == "keystones":
             items = result["keystones"]
             if not items:
-                return "I didn't find one account that many others depend on, under the methods we model."
-            lines = ["Fix these first. The most chains pass through them:"]
-            for index, item in enumerate(items, 1):
+                return "I didn't find one account that many others depend on in the accounts I've checked.\n\nWhich account would you like to check?"
+            lines = []
+            for index, item in enumerate(items):
                 count = item["downstream"]
+                lead = "Start with" if index == 0 else "Then check"
                 lines.append(
-                    f"{index}. {_node_name(item['label'])}: "
+                    f"{lead} {_node_name(item['label'])}. "
                     f"{count} {'account depends' if count == 1 else 'accounts depend'} on it."
                 )
-            lines.append("Accounts that need several things at once can add more.")
-            return "\n".join(lines)
+            lines.append("Some accounts need several things to get in. Want me to plan the fixes?")
+            return "\n\n".join(lines)
         if result.get("outcome") == "route":
             names = " → ".join(_node_name(step["label"]) for step in result["route"])
             hops = result["hops"]
-            return f"The shortest way in takes {hops} {'step' if hops == 1 else 'steps'}: {names}."
+            return (
+                f"The shortest way in takes {hops} {'step' if hops == 1 else 'steps'}:\n\n"
+                f"{names}\n\nThat's the chain to break. Want me to plan the fix?"
+            )
         if result.get("outcome") == "no_single_route":
             return (
                 "There's no way in that needs only one thing. Someone with several of your accounts "
                 "at once could still get in, so I can't promise it's safe."
             )
         if result.get("outcome") == "kept":
-            return f"{escape(result['label'])} is the number you're keeping, so nothing's at risk there."
+            return f"{escape(result['label'])} is the number you're keeping.\n\nWhich changing email or number should we check?"
         if result.get("outcome") in {"error", "not_in_graph", "unknown_root"}:
             account = result.get("account") or {}
             service = result.get("service") or {}
@@ -276,10 +280,10 @@ def templated(results: list) -> str:
                     status = step.get("status")
                     name = account_name(step["account_label"])
                     action = f"{name} is done." if status == "done" else f"Update your {name}."
-                    lines.append(f"{step['order']}. {action}")
+                    lines.append(action)
                 if not result["feasible"]:
                     lines.append("Some changes may not be possible before your deadline.")
-                return "\n".join(lines)
+                return "\n\n".join(lines)
         if result.get("outcome") == "not_affected":
             return "This change doesn't put that account at risk based on how it lets you sign in and get back in."
         if result.get("outcome") in {"path", "lost_now", "recovery_lost"}:
@@ -299,7 +303,7 @@ def templated(results: list) -> str:
                     lines.append(f"You need {sources} to sign in to {target} this way.")
                 else:
                     lines.append(f"Someone needs {sources} to get into {target} this way.")
-            return " ".join(lines) or "I couldn't trace how that account is affected."
+            return "\n\n".join(lines) or "I couldn't trace how that account is affected."
         if "candidates" in result:
             labels = [escape(c["label"]) for c in result["candidates"] if c.get("label")]
             if not labels:
@@ -322,4 +326,4 @@ def approval_summary(plan: dict) -> str:
     if not steps:
         return "There's nothing left to approve. You can check your plan for anything still to do."
     names = list(dict.fromkeys(account_name(step["account_label"]) for step in steps))
-    return f"Ready to update {join_names(names)}. Tap <b>Approve all</b> to start."
+    return f"Ready to update {join_names(names)}.\n\nTap Approve all to start."

@@ -178,8 +178,8 @@ class BotRuntime:
 
     def onboarding(self):
         return (
-            f"This chat isn't linked yet. Open {self.web_url}/onboarding, press Get link code, "
-            "then send /start <code> here."
+            f"Let's connect this chat.\n\nOpen {escape(self.web_url)}/onboarding and tap Get link code, "
+            "then send /start followed by your code here."
         )
 
     async def start(self, update, context):
@@ -207,7 +207,10 @@ class BotRuntime:
             return
         self.pending.pop(chat.id, None)
         await self.send(
-            context.bot, uid, chat.id, "Connected. Tell me what you are changing, or use /status or /risk."
+            context.bot,
+            uid,
+            chat.id,
+            "You're connected ✅\n\nTell me which number or email you're giving up, or use /risk to see what needs attention.",
         )
 
     async def help(self, update, context):
@@ -399,7 +402,7 @@ class BotRuntime:
                     + cards.join_names(cards.account_name(c.account_label) for c in assisted)
                     + " and watch for confirmation once you've changed it."
                 )
-            text = "Approved: " + " ".join(messages)
+            text = "\n\n".join(messages)
         elif action == "plan_root":
             roots = await invoke(views.list_roots, uid)
             root = next((root for root in roots if root.id == payload["root_id"]), None)
@@ -502,7 +505,7 @@ class BotRuntime:
                 bot,
                 pending.uid,
                 chat_id,
-                f"{cards.account_name(pending.service)} sent a code to {escape(pending.channel.removeprefix('sms:'))}. Reply with it here (you’ve got 5 min).",
+                f"{cards.account_name(pending.service)} sent a code to {escape(pending.channel.removeprefix('sms:'))}.\n\nReply with it here before it expires.",
             )
 
     async def relay_otp(self, update, context, uid, code):

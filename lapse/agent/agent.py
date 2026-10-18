@@ -28,14 +28,10 @@ from lapse.trace import current_turn, tool_call
 MAX_TOOL_STEPS = 6
 # Time the LLM gets to choose tools before the deterministic router answers. kimi-k2.7-code takes 2-7 s per call.
 LLM_BUDGET_SECONDS = float(os.environ.get("AGENT_LLM_BUDGET_SECONDS", "15"))
-SMALL_TALK_HINT = (
-    "Try asking: “what happens if someone gets my old number?”, "
-    "“what should I fix first?”, or “plan the fix for my college email”."
-)
+SMALL_TALK_HINT = "Try asking: 'what happens if someone gets my old number?'"
 HELP_TEXT = (
-    "I keep an eye on the numbers and emails you're giving up, and the accounts still tied to them. "
-    "I can tell you who could get in if your old number goes to someone else, what you'd lose if an "
-    "email closes, what to fix first, and plan the fixes for you to approve.\n\n" + SMALL_TALK_HINT
+    "I check which accounts still rely on a number or email you're giving up. "
+    "Then I help you fix them, with your approval.\n\n" + SMALL_TALK_HINT
 )
 HELP = re.compile(
     r"(?:/?help|what\s+(?:can|do)\s+you\s+do|how\s+does\s+(?:this|it|lapse)\s+work|who\s+are\s+you)"

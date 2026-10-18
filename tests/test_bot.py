@@ -156,7 +156,7 @@ async def test_start_binds_code(harness):
     h.context.args = ["one-time-code"]
     await h.runtime.start(h.update, h.context)
     h.modules["telegram_link"].bind.assert_called_once_with("one-time-code", 7)
-    assert last_text(h).startswith("Connected.")
+    assert unescape(last_text(h)).startswith("You're connected ✅")
 
 
 async def test_start_requires_onboarding_without_explicit_default(harness):
@@ -164,7 +164,7 @@ async def test_start_requires_onboarding_without_explicit_default(harness):
     h.modules["telegram_link"].uid_for.return_value = None
     await h.runtime.start(h.update, h.context)
     assert "http://localhost:8080/onboarding" in last_text(h)
-    assert "&lt;code&gt;" in last_text(h)
+    assert "/start followed by your code" in last_text(h)
     h.modules["telegram_link"].bind.assert_not_called()
 
 
@@ -191,7 +191,7 @@ async def test_default_binding_refuses_second_chat(harness):
     h.modules["telegram_link"].claim_default.return_value = None
     h.runtime.default_uid = "explicit-user"
     assert await h.runtime.uid(h.update, h.context) is None
-    assert "linked yet" in last_text(h)
+    assert "connect this chat" in last_text(h)
 
 
 async def test_invalid_link_and_group_do_not_bind(harness):
@@ -412,9 +412,10 @@ async def test_plan_callback_card_and_approval_excludes_tier_four(harness, monke
     plan_for_root.assert_called_once_with("u", "old", None)
     text = h.update.effective_message.edits[0]["text"]
     assert text.startswith("Here&#x27;s how we fix")
-    assert "I can do this once you approve" in text
-    assert "Do it before Oct 30" in text
-    assert "4. Change the" in text
+    assert "I can do this for you once you approve" in text
+    assert "Do it before <b>Oct 30</b>" in text
+    assert "<b>Account &lt;4&gt;</b>" in text
+    assert "4. Change the" not in text
     assert "T3" not in text
     records = [json.loads(value) for value in h.runtime.redis.values.values()]
     assert records == [{"action": "approve_changes", "payload": {"change_ids": ["c1", "c2", "c3"]}}]
@@ -532,7 +533,7 @@ async def test_need_otp_event_then_relay_and_deletion(harness, monkeypatch, plan
     await h.runtime.deliver(h.bot, "lapse:events:u", event())
     assert (
         last_text(h)
-        == "<b>Account &lt;1&gt;</b> sent a code to ••7788. Reply with it here (you’ve got 5 min)."
+        == "<b>Account &lt;1&gt;</b> sent a code to ••7788.\n\nReply with it here before it expires."
     )
     assert h.runtime.pending[7][0].change_id == "c1"
     h.update.effective_message.text = "123456"
@@ -732,7 +733,7 @@ def test_default_uid_is_never_implicit_demo(monkeypatch):
 
 def test_plan_explains_offline_step(plan, scenario):
     plan.steps = [plan.steps[3]]
-    assert "need to contact them" in cards.plan_card(plan, scenario)
+    assert "need to handle this with them directly" in cards.plan_card(plan, scenario)
 
 
 def test_application_registers_commands_callbacks_text_and_lifecycle():
@@ -819,7 +820,10 @@ async def test_risk_kept_number_uses_real_resolver_without_running_risk(harness,
     harness.context.args = hint.split()
     await harness.runtime.risk(harness.update, harness.context)
     assert len(harness.bot.sent) == 1
-    assert unescape(last_text(harness)) == "••6029 is the number you're keeping, so nothing's at risk there."
+    assert (
+        unescape(last_text(harness))
+        == "••6029 is the number you're keeping.\n\nWhich changing email or number should we check?"
+    )
     assert harness.bot.sent[0][0]["reply_markup"] is None
 
 
@@ -934,5 +938,5 @@ async def test_risk_known_service_answers_about_only_that_service(harness, monke
     assert len(harness.bot.sent) == 1
     assert unescape(last_text(harness)) == (
         "You're giving up your old Vi number (••9810). "
-        "Someone who gets it could get into your <b>Figma</b>. Want me to fix it?"
+        "Someone who gets it could get into your <b>Figma</b>.\n\nWant me to fix it?"
     )

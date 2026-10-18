@@ -149,3 +149,46 @@ def test_real_scenario_cards_are_grounded_without_accepting_invented_entities():
         assert not guard.grounded(answer + " Your number is ••1234.", results)
     assert guard.grounded("Your old Vi number (••9810) is at risk.", [phone.model_dump(mode="json")])
     assert not guard.grounded("Your old Airtel number (••9810) is at risk.", [phone.model_dump(mode="json")])
+
+
+def test_keystones_keep_tied_counts_and_escape_account_names():
+    result = {
+        "outcome": "keystones",
+        "keystones": [
+            {"label": "college@example.edu", "downstream": 1},
+            {"label": "personal@example.com", "downstream": 1},
+            {"label": "A&B · personal@example.com", "downstream": 2},
+        ],
+    }
+    answer = guard.templated([result])
+    assert answer == (
+        "Start with <b>college@example.edu</b>. 1 account depends on it.\n\n"
+        "Then check <b>personal@example.com</b>. 1 account depends on it.\n\n"
+        "Then check <b>A&amp;B</b> (personal@example.com). 2 accounts depend on it.\n\n"
+        "Some accounts need several things to get in. Want me to plan the fixes?"
+    )
+    assert guard.grounded(answer, [result])
+    assert not guard.grounded(answer.replace("personal@example.com", "unseen@example.com"), [result])
+
+
+def test_route_keeps_the_arrow_chain_separate_and_grounded():
+    result = {
+        "outcome": "route",
+        "hops": 3,
+        "route": [
+            {"label": "••9810 (Vi)"},
+            {"label": "Google · personal@example.com"},
+            {"label": "personal@example.com"},
+            {"label": "Figma · personal@example.com"},
+        ],
+    }
+    answer = guard.templated([result])
+    assert answer == (
+        "The shortest way in takes 3 steps:\n\n"
+        "your Vi number (••9810) → <b>Google account</b> (personal@example.com) → "
+        "<b>personal@example.com</b> → <b>Figma</b> (personal@example.com)\n\n"
+        "That's the chain to break. Want me to plan the fix?"
+    )
+    assert guard.grounded(answer, [result])
+    assert not guard.grounded(answer.replace("9810", "1234"), [result])
+    assert not guard.grounded(answer.replace("Figma", "Spotify"), [result])
