@@ -58,8 +58,9 @@ def test_reissue_uses_full_scenario_and_notifies_once(detector_graph):
     assert first[0].id == second[0].id
     assert first[0].at == second[0].at == NOW
     assert first[0].detail == (
-        "Your old number (••4321) could go to someone new from <b>Jan 1</b> (in 76 days). "
-        "They could use it to get into <b>Direct</b> and <b>Indirect</b>."
+        "Your old number (••4321) could go to someone new from <b>Jan 1</b> (in 76 days).\n\n"
+        "They could use it to get into <b>Direct</b> and <b>Indirect</b>.\n\n"
+        "Want me to check what needs changing?"
     )
     assert [button["action"] for button in calls[0][2]] == ["open_web", "plan_root", "dismiss_signal"]
     assert g.ro_query("MATCH (:Signal)-[:ABOUT]->(:Root) RETURN count(*)").result_set == [[1]]

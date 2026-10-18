@@ -533,7 +533,7 @@ async def test_typed_approval_rereads_steps_and_mints_fresh_button_without_model
     monkeypatch.setattr(agent, "dispatch", dispatch)
     offline.llm = FakeLLM()
     first = await agent.respond("alice", prompt)
-    assert first["text"] == "Ready to update <b>Dropbox</b>. Tap <b>Approve all</b> to start."
+    assert first["text"] == "Ready to update <b>Dropbox</b>.\n\nTap Approve all to start."
     assert first["buttons"][0]["payload"]["change_ids"] == ["change-1", "change-2", "change-3"]
     offline.plan["steps"][0]["status"] = "done"
     second = await agent.respond("alice", prompt)
@@ -698,7 +698,10 @@ async def test_kept_phone_risk_never_runs_scenario(offline, monkeypatch, use_mod
     if use_model:
         offline.llm = FakeLLM(message(calls=[("takeover_if_reassigned", {"root_id": "phone-new"})]))
     reply = await agent.respond("alice", "risk of 6029")
-    assert reply["text"] == "••6029 is the number you're keeping, so nothing's at risk there."
+    assert (
+        reply["text"]
+        == "••6029 is the number you're keeping.\n\nWhich changing email or number should we check?"
+    )
     assert reply["buttons"] == []
     assert "takeover_if_reassigned" not in reply["tool_calls"]
     assert reply["diagnostics"]["llm_requests"] == int(use_model)
@@ -756,7 +759,7 @@ async def test_small_talk_reply_without_tools(offline):
     offline.llm = FakeLLM(message("Hey! Happy to help you stay on top of things."))
     reply = await agent.respond("alice", "hey whats up")
     assert reply["text"].startswith("Hey! Happy to help")
-    assert "what should I fix first" in reply["text"]
+    assert "what happens if someone gets my old number" in reply["text"]
     assert reply["diagnostics"]["fallback_used"] is False
     assert reply["tool_calls"] == ["list_entities"]
 
@@ -795,7 +798,7 @@ def test_small_talk_allows_capability_answers():
 async def test_help_question_gets_capability_answer_offline(offline):
     offline.llm = FakeLLM(TimeoutError())
     reply = await agent.respond("alice", "What can you do?")
-    assert "what to fix first" in reply["text"]
+    assert "with your approval" in reply["text"]
     assert reply["tool_calls"] == []
 
 
@@ -827,7 +830,7 @@ async def test_fallback_route_question_uses_path_between(offline, monkeypatch):
 async def test_help_question_skips_the_model(offline):
     offline.llm = FakeLLM()
     reply = await agent.respond("alice", "what can you do?")
-    assert "what to fix first" in reply["text"]
+    assert "with your approval" in reply["text"]
     assert offline.llm.requests == []
 
 
@@ -896,14 +899,14 @@ async def test_account_risk_never_reassures_on_incomplete_checks(
         results=[{"account": {"id": "account", "display": "Canva", "modelled": True}, "methods": []}],
     )
     text = await tools.account_risk()
-    assert ("assessment is incomplete" in text) == incomplete
+    assert ("I still need to check those" in text) == incomplete
     assert ("don't put" in text) == (not incomplete)
     if affected:
         assert "could get into" in text
         assert tools.results[-1]["root_ids"] == ["old"]
-        assert "fix the confirmed risks" in text
+        assert "fix what I found so far" in text
     if not incomplete:
-        assert "under the methods we model" in text
+        assert "sign-in and recovery options I've checked" in text
 
 
 @pytest.mark.parametrize(
@@ -923,6 +926,6 @@ async def test_account_risk_requires_valid_root_metadata(world, monkeypatch, roo
         results=[{"account": {"id": "account", "display": "Canva", "modelled": True}, "methods": []}],
     )
     text = await tools.account_risk()
-    assert "assessment is incomplete" in text
+    assert "I still need to check those" in text
     assert "don't put" not in text
     assert tools.calls == ["list_roots"]

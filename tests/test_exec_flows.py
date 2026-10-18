@@ -499,7 +499,7 @@ async def test_assisted_phone_copy_masks_number_and_explains_role(execution):
     execution.add(ctx)
     await AssistedExecutor().run(ctx)
     assert execution.notifications[0][1] == (
-        "Open <b>A&amp;B</b> settings and change your 2-Step phone from ••9810 to ••6029. "
+        "Open <b>A&amp;B</b> settings and change your 2-Step phone from ••9810 to ••6029.\n\n"
         "I'll check your email for confirmation and tick it off once it's changed."
     )
 
@@ -510,7 +510,7 @@ async def test_assisted_removal_copy_does_not_offer_a_replacement(execution):
     execution.add(ctx)
     await AssistedExecutor().run(ctx)
     assert execution.notifications[0][1] == (
-        "Open <b>Notion</b> settings and remove demo@example.edu as your email. "
+        "Open <b>Notion</b> settings and remove demo@example.edu as your email.\n\n"
         "I'll check your email for confirmation and tick it off once it's changed."
     )
 

@@ -58,7 +58,7 @@ async def handle_execute_change(uid: str, payload: dict, *, trace=None) -> dict:
     try:
         emitter.emit(
             "progress",
-            f"On it, changing your <b>{escape(policy.service.name)}</b> {CONTACT_ROLES[change.role]} now…",
+            f"I'm checking your <b>{escape(policy.service.name)}</b> {CONTACT_ROLES[change.role]} settings now…",
         )
         confirmed = await executor.run(ctx)
         if confirmed:
@@ -71,7 +71,7 @@ async def handle_execute_change(uid: str, payload: dict, *, trace=None) -> dict:
     except (RuntimeError, ValueError, OSError, TimeoutError):
         emitter.emit(
             "failed",
-            f"I couldn't finish that change on <b>{escape(policy.service.name)}</b>. "
+            f"I couldn't finish that change on <b>{escape(policy.service.name)}</b>.\n\n"
             "Check your account settings before trying again.",
         )
         return {"change_id": change.id, "status": "failed"}

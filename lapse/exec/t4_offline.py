@@ -21,12 +21,12 @@ class OfflineExecutor:
             else f"remove {contact_value(ctx.old_root)} as my {CONTACT_ROLES[ctx.change.role]}"
         )
         text = (
-            f"You'll need to handle this with <b>{escape(ctx.service.name)}</b> directly.\n"
-            "1. Check which documents they need at the link below.\n"
-            "2. Bring your ID and account details. Make sure you can use your new phone or email.\n"
-            "3. Ask them to update your details, and keep the receipt.\n"
-            "4. Check that they removed your old phone or email.\n\n"
-            f"You can say: Please {action} and send me written confirmation.\n"
+            f"You'll need to handle this with <b>{escape(ctx.service.name)}</b> directly. "
+            "Check which documents they need at the link below.\n\n"
+            "Bring your ID and account details, and make sure you can use your new phone or email. "
+            "Ask them to update your details and keep the receipt. "
+            "Check that they removed your old phone or email.\n\n"
+            f"You can say: Please {action} and send me written confirmation. "
             "Add your account number, name and signature to the form."
         )
         ctx.emitter.emit("need_user", text, url=ctx.procedure.doc_url)

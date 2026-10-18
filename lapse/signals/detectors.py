@@ -124,9 +124,9 @@ def run_detectors(uid: str, *, now=None, trace=None, rdap_client=None) -> list[S
             return ""
         sites = "another site" if count == 1 else f"{count} other sites"
         return (
-            f" I don't know how {sites} lets you back in, so I can't promise it's safe."
+            f"\n\nI don't know how {sites} lets you back in, so I can't promise it's safe."
             if count == 1
-            else (f" I don't know how {sites} let you back in, so I can't promise they're safe.")
+            else (f"\n\nI don't know how {sites} let you back in, so I can't promise they're safe.")
         )
 
     def when(value):
@@ -137,9 +137,7 @@ def run_detectors(uid: str, *, now=None, trace=None, rdap_client=None) -> list[S
         if root.kind == "phone" and root.status in {"retiring", "inactive"} and root.reissue_after:
             result = risk(root, "takeover")
             label = root_name(root)
-            detail = (
-                f"{label[:1].upper() + label[1:]} could go to someone new from {when(root.reissue_after)}. "
-            )
+            detail = f"{label[:1].upper() + label[1:]} could go to someone new from {when(root.reissue_after)}.\n\n"
             if result.affected_accounts:
                 detail += f"They could use it to get into {names(result.affected_accounts)}."
             else:
@@ -148,14 +146,14 @@ def run_detectors(uid: str, *, now=None, trace=None, rdap_client=None) -> list[S
                 SignalKind.reissue_countdown,
                 root,
                 "Your old number could go to someone new",
-                detail + caveat(result),
+                detail + caveat(result) + "\n\nWant me to check what needs changing?",
                 root.reissue_after,
                 result.id,
             )
         if root.kind == "email" and root.status == "closing" and root.closes_at:
             result = risk(root, "lockout")
             label = root_name(root)
-            detail = f"{label[:1].upper() + label[1:]} shuts down on {when(root.closes_at)}. "
+            detail = f"{label[:1].upper() + label[1:]} shuts down on {when(root.closes_at)}.\n\n"
             if result.lost_now_accounts:
                 detail += (
                     f"You'll lose access to {names(result.lost_now_accounts)}, so save anything you need. "
@@ -175,7 +173,7 @@ def run_detectors(uid: str, *, now=None, trace=None, rdap_client=None) -> list[S
                 SignalKind.closing_email,
                 root,
                 "Your email is shutting down",
-                detail.rstrip() + caveat(result),
+                detail.rstrip() + caveat(result) + "\n\nWant me to check what needs changing?",
                 root.closes_at,
                 result.id,
             )
@@ -196,14 +194,14 @@ def run_detectors(uid: str, *, now=None, trace=None, rdap_client=None) -> list[S
                     SignalKind.domain_expiry,
                     root,
                     "Your email domain is expiring",
-                    f"<b>{escape(domain)}</b> expires on {when(expires)}. "
+                    f"<b>{escape(domain)}</b> expires on {when(expires)}.\n\n"
                     + (
                         f"Someone who buys it could get into {names(result.affected_accounts)}. "
                         if result.affected_accounts
                         else "I haven't found any accounts someone could get into with it. "
                     )
-                    + "Renew it before then if you're keeping it."
-                    + caveat(result),
+                    + caveat(result)
+                    + "\n\nRenew it before then if you're keeping it.",
                     expires,
                     result.id,
                 )

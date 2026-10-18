@@ -10,7 +10,7 @@ from lapse.contracts import Change, Plan, Reached, Root, ScenarioResult
 def test_incomplete_risk_card_escapes_root_labels():
     root = Root(id="closing", kind="email", label="<inbox>", address="<demo@example.edu>")
     text = account_risk_card({"id": "account", "display": "Canva"}, [], incomplete=[root])
-    assert "assessment is incomplete" in text
+    assert "I still need to check those" in text
     assert "&lt;demo@example.edu&gt;" in text
     assert "<demo@example.edu>" not in text
     assert "don't put" not in text
@@ -57,9 +57,9 @@ def test_old_number_card_names_direct_and_indirect_accounts():
     text = scenario_card(root, result, today=date(2026, 10, 18))
     assert text == (
         "Heads up 👀 You're giving up your old Vi number (••9810) on <b>Oct 31</b> (in 13 days). "
-        "Carriers can hand it to someone new after about 90 days. "
+        "Carriers can hand it to someone new after about 90 days.\n\n"
         "Whoever gets it could get into your <b>Google account</b> (demo@example.com). "
-        "Through that account, they could get into <b>Figma</b> too. Want me to fix it?"
+        "Through that account, they could get into <b>Figma</b> too.\n\nWant me to fix it?"
     )
 
 
@@ -97,7 +97,7 @@ def test_college_only_host_closes_and_completed_move_is_grounded():
     text = scenario_card(root, result, accounts=[moved], today=date(2026, 10, 18))
     assert text == (
         "Your college email (demo@example.edu) shuts down on <b>Nov 15</b> (in 28 days). "
-        "The <b>Google account</b> that comes with it goes too, so save anything you need from it. "
+        "The <b>Google account</b> that comes with it goes too, so save anything you need from it.\n\n"
         "Good news: nothing else I've checked depends on it, because you moved <b>Notion</b> already ✅"
     )
     assert "Notion" not in scenario_card(root, result)
@@ -139,7 +139,7 @@ def test_plan_names_roles_target_deadline_without_internal_ids():
     text = plan_card(plan, roots=roots, today=date(2026, 10, 18))
     assert "Just one step:" in text
     assert "Change the recovery phone and 2-Step phone for your <b>Google account</b> to ••6029." in text
-    assert "Do it before Oct 30 (in 12 days)." in text
+    assert "Do it before <b>Oct 30</b> (in 12 days)." in text
     assert not any(internal in text for internal in ["private", "proposed", "T3", "takeover", "lockout"])
     assert guard.grounded(
         text, [plan.model_dump(mode="json"), [root.model_dump(mode="json") for root in roots]]
